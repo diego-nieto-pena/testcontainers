@@ -42,6 +42,7 @@ public static GenericContainer webServer =
 ```
 In this case the image name, exposed port and the command executed inside the container are specified.
 
+
 ```
     @Test
     public void test_webserver_container_get_request_then_return_response() throws Exception {
@@ -82,7 +83,8 @@ In this case is necessary to add the specific dependency and the database driver
             new PostgreSQLContainer("postgres:9.4")
             .withInitScript("import.sql");
 ```
-DDL and DML statements can be executed using a script file and the withInitScript("some-file.sql") method. An alternative could be the [@Sql](https://docs.spring.io/spring-framework/docs/5.2.0.RC1/spring-framework-reference/testing.html#spring-testing-annotation-sql) annotation.
+DDL and DML statements can be executed using a script file and the withInitScript("some-file.sql") method.
+An alternative could be the [@Sql](https://docs.spring.io/spring-framework/docs/5.2.0.RC1/spring-framework-reference/testing.html#spring-testing-annotation-sql) annotation.
   
 > check the PostgreSQLContainerWithScriptTest.java class
   
@@ -109,20 +111,77 @@ DDL and DML statements can be executed using a script file and the withInitScrip
 
 ### Database containers launched via JDBC URL scheme
 
-An alternative for launching database containers is the [JDBC URL scheme](https://www.testcontainers.org/modules/databases/jdbc/), as easy as modifying the JDBC connection URL:
+An alternative for launching database containers is the [JDBC URL scheme](https://www.testcontainers.org/modules/databases/jdbc/), 
+as easy as modifying the JDBC connection URL:
  
  ```
  spring.datasource.url=jdbc:tc:postgresql:11.7-alpine:///
  ```
+
  > Check the JDBCContainerLaunchedURLSchemeTest.java class
- 
+
+## The LocalStack module
+
+A fully functional local AWS cloud stack, could be used to develop and test cloud and serverless applications 
+without using the cloud.
+
+The [LocalStack](https://localstack.cloud/) container provides an empty local AWS cloud, commands can be executed inside the container for 
+creating the proper resources, initialization will happen as part of the JUnit Jupiter lifecycle (**@BeforeAll**)
+preparing the environment before running any test. LocalStack container offers the [awslocal](https://github.com/localstack/awscli-local) 
+executable (AWS CLI wrapper) used to create the resources:
+
+```
+localStackContainer.execInContainer("awslocal", "s3", "mb", "s3://mybucket");
+```
+This test is using the [JUnit Jupiter Testcontainers](https://www.testcontainers.org/test_framework_integration/junit_5/) 
+extension provided by the **@Testcontainers** annotation, in combination with the **Container** annotation
+two modes are supported:
+
+- Containers are restarted for every test method, by declaring the container as instance field.
+- Containers will be shared between test methods, by declaring the container as static field.
+
+With a default LocalStack configuration IAM permissions aren't validated so any access/secret key will be accepted:
+```
+propertyRegistry.add("cloud.aws.credentials.access-key", localStackContainer::getAccessKey);
+propertyRegistry.add("cloud.aws.credentials.secret-key", localStackContainer::getSecretKey);
+```
+The test will send a message to the SQS queue and then will be validated into the S3 bucket:
+
+The message:
+```
+{
+  "id": "4",
+  "name": "Notification Email",
+  "details": "Medium priority notification",
+  "createdAt": "2021-11-11 12:00:00",
+  "priority": 2
+}
+
+final GenericMessage<String> message = new GenericMessage<>(data,
+                Map.of("contentType", "application/json"));
+
+queueMessagingTemplate.send(QUEUE_NAME, message);
+
+given()
+    .ignoreException(AmazonS3Exception.class)
+    .await()
+    .atMost(5, SECONDS)
+    .untilAsserted(() -> assertNotNull(amazonS3.getObject(BUCKET_NAME, "4")));
+```
 
 - fix classes names - set failsafe plugin
 - Docker compose
 - JDBC URL Schema Launcher
-- scripts
-- aws
 - http
+- @Rule and classrule
+- Ryuk
+- BOM
+- LocalStack
+- awaitility
+- -JUnit Jupiter Lifecycle
+- DynamicPropertyRegistry
+- @DynamicPropertySource
+
 
 # conclusions
 Running a Docker image for every test method can take an enormous amount of time. To increase performance we need to make a real-life compromise. We can run a Docker image per class or even run once for all integration test executions. The second approach has been presented in the code. If we decide to share Docker images between tests, we need to be ready for it. There are many ways to achieve it
@@ -131,6 +190,7 @@ Running a Docker image for every test method can take an enormous amount of time
 - Tests should clean up the state after execution. This approach consumes much more development time and is error-prone.
 
 Pros and Cons
+Option one is using real AWS services for our tests and hence making sure the application can work with them. It has the downside of additional AWS costs
 You run tests against real components, for example, the PostgreSQL database instead of the H2 database, which doesn’t support the Postgres-specific functionality (e.g. partitioning or JSON operations).
 You can mock AWS services with Localstack or Docker images provided by AWS. It will simplify administrative actions, cut costs and make your build offline.
 You can run your tests offline - no Internet connection is needed. It is an advantage for people who are traveling or if you have a slow Internet connection (when you have already run them once and there is no version change in the container).
@@ -139,6 +199,7 @@ programmatically simulate timeout from external services (e.g. by configuring Mo
 simulate HTTP codes that are not explicitly supported by our application.
 Implementation and tests can be written by developers and exposed in the same pull request by backend developers.
 Even one integration test can verify if your application context starts properly and your database migration scripts (e.g. Flyway) are executing correctly.
+
 Disadvantages of using the TestContainers library
 We bring another dependency to our system that you need to maintain.
 You need to run containers at least once - it consumes time and resources. For example, PostgreSQL as a Docker image needs around 4 seconds to start on my machine, whereas the H2 in-memory database needs only 0.4 seconds. From my experience, Localstack which emulates AWS components, can start much longer, even 20 seconds on my machine.
