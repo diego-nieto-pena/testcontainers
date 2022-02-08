@@ -8,9 +8,11 @@ import io.testcontainers.event.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
+@Profile("aws")
 @Component
 public class MessageListener {
 

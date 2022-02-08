@@ -1,4 +1,6 @@
-package io.testcontainers.containers;
+package io.testcontainers.commons;
+
+import io.testcontainers.containers.MessageListenerIT;
 
 import java.io.IOException;
 import java.net.URI;
@@ -7,7 +9,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class Commons {
+public class Utils {
 
     public static String getFileData(String filename) throws IOException, URISyntaxException {
         URI uri = MessageListenerIT.class.getClassLoader()

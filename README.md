@@ -168,13 +168,121 @@ given()
     .atMost(5, SECONDS)
     .untilAsserted(() -> assertNotNull(amazonS3.getObject(BUCKET_NAME, "4")));
 ```
+## Elasticsearch Module (extending specialized containers)
+
+Based on the official Docker image provided by elastic, the example in the **ElasticsearchIT.java** class shows
+an alternative for configuring containers by extending specialized container classes:
+
+```
+public class ElasticsearchTestContainer extends ElasticsearchContainer {
+    private static final String DOCKER_ELASTIC = "docker.elastic.co/elasticsearch/elasticsearch:7.11.2";
+
+    private static final String CLUSTER_NAME = "local-cluster";
+
+    private static final String ELASTIC_SEARCH = "elasticsearch";
+
+    public ElasticsearchTestContainer() {
+        super(DOCKER_ELASTIC);
+        this.addFixedExposedPort(9200, 9200);
+        this.addFixedExposedPort(9300, 9300);
+        this.addEnv(CLUSTER_NAME, ELASTIC_SEARCH);
+    }
+}
+```
+
+## Waiting for the containers to be ready
+
+#### Wait for an HTTP(S) endpoint to return a particular status code
+```
+public static GenericContainer myServer = new GenericContainer("alpine:3.2")
+                    .withExposedPorts(8005)
+                    .waitingFor(Wait.forHttp("/")
+                            .forStatusCode(200));
+```
+#### Wait for multiple possible status codes
+```
+Wait.forHttp("/")
+    .forStatusCode(200)
+    .forStatusCode(301)
+```
+### Wait for Log output strategy
+In some cases a log output is a simple way to determine the container status
+```
+public static GenericContainer myServer = new GenericContainer("alpine:3.2")
+                    .withExposedPorts(8005)
+                    .waitingFor(Wait.forLogMessage(".*Ready to accept connections.*\\n", 1));
+```
+
+Other wait strategies can be checked at the [**Wait**](https://www.javadoc.io/doc/org.testcontainers/testcontainers/latest/org/testcontainers/containers/wait/strategy/Wait.html) class 
+or the various subclasses of [**WaitStrategy**](https://www.javadoc.io/doc/org.testcontainers/testcontainers/latest/org/testcontainers/containers/wait/strategy/WaitStrategy.html)
+
+## Startup check strategies
+
+All logic is implemented in [**StartupCheckStrategy**](https://www.javadoc.io/doc/org.testcontainers/testcontainers/latest/org/testcontainers/containers/startupcheck/StartupCheckStrategy.html) child classes.
+
+The strategy used by default Testcontainers just checks if the container is running, [**IsRunningStartupCheckStrategy**](https://www.javadoc.io/doc/org.testcontainers/testcontainers/latest/org/testcontainers/containers/startupcheck/IsRunningStartupCheckStrategy.html) implemented in class
+
+#### One shot startup strategy example
+
+Targeted for containers that runs for a short period of time, success is considered when the container has stopped with exit code 0.
+```
+public GenericContainer<?> bboxWithOneShot = new GenericContainer<>(DockerImageName.parse("busybox:1.31.1"))
+    .withCommand(String.format("echo %s", HELLO_TESTCONTAINERS))
+    .withStartupCheckStrategy(
+        new OneShotStartupCheckStrategy().withTimeout(Duration.ofSeconds(3))
+    )
+```
+#### Indefinite one shot startup strategy example
+Variant of one shot strategy that does not impose a timeout. For situations such as when a long-running task forms a part of container startup.
+```
+public GenericContainer<?> bboxWithIndefiniteOneShot = new GenericContainer<>(DockerImageName.parse("busybox:1.31.1"))
+    .withCommand("sh", "-c", String.format("sleep 5 && echo \"%s\"", HELLO_TESTCONTAINERS))
+    .withStartupCheckStrategy(
+        new IndefiniteWaitOneShotStartupCheckStrategy()
+    );
+```
+#### Minimum duration startup strategy
+Checks if the container is running and has been running for a minimum period of time
+```
+    public static GenericContainer myServer =
+            new GenericContainer("alpine:3.2")
+                    .withExposedPorts(8005)
+                    .withCommand("/bin/sh", "-c", "while true; do echo "
+                            + "\"HTTP/1.1 200 OK\n\nHello World!\" | nc -l -p 8005; done")
+                    .withStartupCheckStrategy(
+                            new MinimumDurationRunningStartupCheckStrategy(Duration.ofSeconds(1))
+                    );
+```
+Before running any containers Testcontainers will perform a set of startup validations, ensuring the correct environment configuration.
+```
+        ℹ︎ Checking the system...
+        ✔ Docker version should be at least 1.6.0
+        ✔ Docker environment should have more than 2GB free disk space
+        ✔ File should be mountable
+        ✔ A port exposed by a docker container should be accessible
+
+```
+Those validations take some seconds, avoiding these validations is possible by adding **checks.disable=true**
+in the **$HOME/.testcontainers.properties**.
+
+## Manual container lifecycle control
+
+Containers can be started and stopped by using the **start()** and **stop()** methods, additionally container classes implement **AutoClosable**.
+```
+try (GenericContainer container = new GenericContainer("imagename")) {
+    container.start();
+    // ... container usage
+}
+```
+## Ryuk container 
+[Ryuk](https://github.com/testcontainers/moby-ryuk) is the resource reaper is responsible for container removal and automatic cleanup of dead containers at JVM shutdown.
+Ryuk must be started as a **privileged container**, if there is already an implemented container cleanup strategy after the execution,
+you can turn off the Ryuk container by setting **TESTCONTAINERS_RYUK_DISABLED** environment variable to **true**.
+
 
 - fix classes names - set failsafe plugin
 - Docker compose
-- JDBC URL Schema Launcher
-- http
 - @Rule and classrule
-- Ryuk
 - BOM
 - LocalStack
 - awaitility

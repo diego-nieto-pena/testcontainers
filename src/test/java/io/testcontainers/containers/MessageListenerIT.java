@@ -3,11 +3,13 @@ package io.testcontainers.containers;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import io.awspring.cloud.messaging.core.QueueMessagingTemplate;
+import io.testcontainers.commons.Utils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.messaging.support.GenericMessage;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -16,11 +18,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Map;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -29,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.S3;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SQS;
 
+@ActiveProfiles("aws")
 @Testcontainers
 @SpringBootTest
 public class MessageListenerIT {
@@ -66,7 +65,7 @@ public class MessageListenerIT {
     @Test
     void test_send_sqs_msg_then_put_in_bucket() throws IOException, URISyntaxException {
 
-        String data = Commons.getFileData("message.json");
+        String data = Utils.getFileData("message.json");
 
         final GenericMessage<String> message = new GenericMessage<>(data,
                 Map.of("contentType", "application/json"));

@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.core.QueueMessagingTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 
+@Profile("aws")
 @Configuration
 public class MessageConfiguration {
     @Bean

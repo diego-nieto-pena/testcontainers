@@ -1,9 +1,10 @@
-package io.testcontainers.service;
+package io.testcontainers.service.impl;
 
 import io.testcontainers.dto.PersonDTO;
 import io.testcontainers.entity.Person;
 import io.testcontainers.mapper.PersonMapper;
 import io.testcontainers.repository.PersonRepository;
+import io.testcontainers.service.PersonService;
 import lombok.RequiredArgsConstructor;
 import org.mapstruct.factory.Mappers;
 import org.springframework.stereotype.Service;
