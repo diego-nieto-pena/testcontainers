@@ -279,38 +279,22 @@ try (GenericContainer container = new GenericContainer("imagename")) {
 Ryuk must be started as a **privileged container**, if there is already an implemented container cleanup strategy after the execution,
 you can turn off the Ryuk container by setting **TESTCONTAINERS_RYUK_DISABLED** environment variable to **true**.
 
+# Pros
 
-- fix classes names - set failsafe plugin
-- Docker compose
-- @Rule and classrule
-- BOM
-- LocalStack
-- awaitility
-- -JUnit Jupiter Lifecycle
-- DynamicPropertyRegistry
-- @DynamicPropertySource
+- Run tests again real components, e.g. H2 doesn't support postgreSQL-specific functionality. 
+- Mock AWS services with LocalStack will simplify administrative actions, lower costs and provide an offline environment.
+- Test corner cases; HTTP communication timeouts, simulated unexpected response codes.
+- Homogeneous environment configuration for all developers.
+- Applications with several microservices and dependencies could be mocked easily.
+- A single container can be run for all integration test executions.
+- Startup validations could verify if the application context starts properly and DB migration scripts are executing as expected.
 
+# Cons
 
-# conclusions
-Running a Docker image for every test method can take an enormous amount of time. To increase performance we need to make a real-life compromise. We can run a Docker image per class or even run once for all integration test executions. The second approach has been presented in the code. If we decide to share Docker images between tests, we need to be ready for it. There are many ways to achieve it
-
-- Tests should operate on unique IDs, names, etc. That way, we can avoid collisions of database constraints. In this case, you don’t need to clean up after the test execution. Some problems can occur, for example when you count elements in the database table. You can count elements created by different tests.
-- Tests should clean up the state after execution. This approach consumes much more development time and is error-prone.
-
-Pros and Cons
-Option one is using real AWS services for our tests and hence making sure the application can work with them. It has the downside of additional AWS costs
-You run tests against real components, for example, the PostgreSQL database instead of the H2 database, which doesn’t support the Postgres-specific functionality (e.g. partitioning or JSON operations).
-You can mock AWS services with Localstack or Docker images provided by AWS. It will simplify administrative actions, cut costs and make your build offline.
-You can run your tests offline - no Internet connection is needed. It is an advantage for people who are traveling or if you have a slow Internet connection (when you have already run them once and there is no version change in the container).
-You can test corner cases in HTTP communication like:
-programmatically simulate timeout from external services (e.g. by configuring MockServer to respond with a delay that is bigger than the timeout set in your HTTP client),
-simulate HTTP codes that are not explicitly supported by our application.
-Implementation and tests can be written by developers and exposed in the same pull request by backend developers.
-Even one integration test can verify if your application context starts properly and your database migration scripts (e.g. Flyway) are executing correctly.
-
-Disadvantages of using the TestContainers library
-We bring another dependency to our system that you need to maintain.
-You need to run containers at least once - it consumes time and resources. For example, PostgreSQL as a Docker image needs around 4 seconds to start on my machine, whereas the H2 in-memory database needs only 0.4 seconds. From my experience, Localstack which emulates AWS components, can start much longer, even 20 seconds on my machine.
-A continuous integration (e.g. Jenkins) machine needs to be bigger (build uses more RAM and CPU).
-Your local computer should be pretty powerful. If you run many Docker images, it can consume a lot of resources.
-Sometimes, integration tests with TestContainers are still not sufficient. For example, while testing REST responses with a mockserver container you can miss changes of real API. Inside the integration test, you may not reflect it, and your code still can crash on production. To minimize the risk, you may consider leveraging Contract Testing via Spring Cloud Contract.
+- Bring additional dependencies to maintain.
+- Running a Docker image for every test method can take an enormous amount of time and resources.
+- For avoiding conflicts/collisions tests should operate on unique IDs, names, etc.
+- Resources cleanup is error-prone. 
+- Containers startup time is higher than other strategies e.g. PostgreSQl takes much more time than H2 to start.
+- May be necessary to scale up on hardware for continuos integration. 
+- Local machine should be a good one in order to perform well.
