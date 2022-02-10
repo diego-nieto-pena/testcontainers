@@ -279,7 +279,7 @@ try (GenericContainer container = new GenericContainer("imagename")) {
 Ryuk must be started as a **privileged container**, if there is already an implemented container cleanup strategy after the execution,
 you can turn off the Ryuk container by setting **TESTCONTAINERS_RYUK_DISABLED** environment variable to **true**.
 
-# Pros
+## Pros
 
 - Run tests again real components, e.g. H2 doesn't support postgreSQL-specific functionality. 
 - Mock AWS services with LocalStack will simplify administrative actions, lower costs and provide an offline environment.
@@ -289,7 +289,7 @@ you can turn off the Ryuk container by setting **TESTCONTAINERS_RYUK_DISABLED** 
 - A single container can be run for all integration test executions.
 - Startup validations could verify if the application context starts properly and DB migration scripts are executing as expected.
 
-# Cons
+## Cons
 
 - Bring additional dependencies to maintain.
 - Running a Docker image for every test method can take an enormous amount of time and resources.
@@ -298,3 +298,11 @@ you can turn off the Ryuk container by setting **TESTCONTAINERS_RYUK_DISABLED** 
 - Containers startup time is higher than other strategies e.g. PostgreSQl takes much more time than H2 to start.
 - May be necessary to scale up on hardware for continuos integration. 
 - Local machine should be a good one in order to perform well.
+
+## References
+
+- https://rieckpil.de/initialization-strategies-with-testcontainers-for-integration-tests/
+- https://www.testcontainers.org/
+- https://fullstackcode.dev/2022/01/22/integration-testing-with-docker-compose-and-testcontainers/
+- https://engineering.zalando.com/posts/2021/02/integration-tests-with-testcontainers.html
+- https://www.baeldung.com/docker-test-containers
